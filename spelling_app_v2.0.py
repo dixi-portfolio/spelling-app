@@ -259,12 +259,10 @@ def start_spelling_test(words):
             print(f"Word {i + 1} of {len(words_to_test)}")
             print("\nListen carefully...")
             
-            # First, speak the introductory phrase and word. This is a blocking call.
-            speak(f"The word is {word}", rate=130)
-
-            # Immediately launch the second speak in the background.
             try:
-                encoded_text = base64.b64encode(word.encode('utf-8')).decode('utf-8')
+                # The text to be spoken, with a pause indicated by the period.
+                text_to_say = f"The word is {word}. {word}"
+                encoded_text = base64.b64encode(text_to_say.encode('utf-8')).decode('utf-8')
                 python_executable = sys.executable
                 script = (
                     "import pyttsx3, base64; "
@@ -276,15 +274,23 @@ def start_spelling_test(words):
                 )
                 command = [python_executable, "-c", script]
                 
-                # Use Popen to run the second speak in the background without waiting.
-                # This allows the user to start typing immediately.
+                # Use Popen to run the combined speech in the background.
+                # This allows the input prompt to appear immediately.
                 subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             except Exception as e:
                 # Fallback in case the background process fails to launch.
                 print(f"[DEBUG] Could not launch background speech: {e}")
+                # Provide a text fallback if speech fails
+                print(f"The word is: {word}")
 
-            # The input prompt is now available immediately after the first speak.
-            typed_word = input("\nType the word here: ").strip()
+            # The input prompt now appears immediately, while audio plays.
+            typed_word = input("\nType the word here (or type 'exit' to quit): ").strip()
+            
+            if typed_word.lower() == 'exit':
+                print("\nTest ended. Returning to the main menu.")
+                input("Press Enter to continue...")
+                return # Exit the function and return to the main menu
+
             test_results.append({'correct': item, 'typed': typed_word})
 
         clear_screen()
