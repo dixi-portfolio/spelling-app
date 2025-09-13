@@ -1,0 +1,126 @@
+#:kivy 1.11.1
+
+<MainMenuScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 40
+        spacing: 20
+
+        Label:
+            text: 'Spelling Bee App'
+            font_size: '40sp'
+            size_hint_y: None
+            height: self.texture_size[1] + 20
+
+        Button:
+            text: 'Load Word List (.csv or .txt)'
+            font_size: '20sp'
+            on_press: root.load_file()
+        
+        Button:
+            text: 'Exit'
+            font_size: '20sp'
+            on_press: app.stop()
+
+<SelectWordsScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 30
+        spacing: 20
+
+        Label:
+            text: 'Select Words to Test'
+            font_size: '30sp'
+            size_hint_y: 0.2
+
+        Label:
+            id: info_label
+            text: root.info_label
+            font_size: '18sp'
+            size_hint_y: 0.3
+
+        TextInput:
+            id: selection_input
+            hint_text: "e.g., 1-10, 15, 21-25 or 'all'"
+            font_size: '22sp'
+            multiline: False
+            size_hint_y: 0.2
+            on_text_validate: root.start_test_with_selection()
+
+        Button:
+            text: 'Start Test'
+            font_size: '20sp'
+            size_hint_y: 0.2
+            on_press: root.start_test_with_selection()
+
+        Button:
+            text: 'Back to Main Menu'
+            font_size: '18sp'
+            size_hint_y: 0.15
+            on_press: root.manager.current = 'main_menu'
+
+
+<SpellingTestScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 30
+        spacing: 20
+
+        Label:
+            id: progress_label
+            text: root.progress_label
+            font_size: '24sp'
+            size_hint_y: 0.2
+
+        TextInput:
+            id: word_input
+            hint_text: 'Type the word here'
+            font_size: '28sp'
+            multiline: False
+            size_hint_y: 0.3
+            on_text_validate: root.submit_word() # Submits on Enter key
+
+        Button:
+            text: 'Submit and Next Word'
+            font_size: '20sp'
+            size_hint_y: 0.2
+            on_press: root.submit_word()
+            
+        Button:
+            text: 'End Test'
+            font_size: '18sp'
+            size_hint_y: 0.15
+            background_color: (0.8, 0.2, 0.2, 1) # Red color
+            on_press: root.manager.current = 'main_menu'
+
+
+<ResultsScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 30
+        spacing: 20
+
+        Label:
+            text: 'Results'
+            font_size: '32sp'
+            size_hint_y: 0.2
+
+        Label:
+            id: results_label
+            text: root.results_label
+            font_size: '20sp'
+            markup: True # Allows for color formatting
+
+        Button:
+            id: practice_button
+            text: 'Practice Misspelled Words'
+            font_size: '20sp'
+            size_hint_y: 0.2
+            on_press: root.practice_again()
+
+        Button:
+            text: 'Main Menu'
+            font_size: '20sp'
+            size_hint_y: 0.2
+            on_press: root.manager.current = 'main_menu'
+
