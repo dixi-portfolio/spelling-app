@@ -284,7 +284,13 @@ def start_spelling_test(words):
                 print(f"The word is: {word}")
 
             # The input prompt now appears immediately, while audio plays.
-            typed_word = input("\nType the word here: ").strip()
+            typed_word = input("\nType the word here (or type 'exit' to quit): ").strip()
+            
+            if typed_word.lower() == 'exit':
+                print("\nTest ended. Returning to the main menu.")
+                input("Press Enter to continue...")
+                return # Exit the function and return to the main menu
+
             test_results.append({'correct': item, 'typed': typed_word})
 
         clear_screen()
