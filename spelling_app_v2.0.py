@@ -258,8 +258,32 @@ def start_spelling_test(words):
             clear_screen()
             print(f"Word {i + 1} of {len(words_to_test)}")
             print("\nListen carefully...")
+            
+            # First, speak the introductory phrase and word. This is a blocking call.
             speak(f"The word is {word}", rate=130)
-            speak(word, rate=130)
+
+            # Immediately launch the second speak in the background.
+            try:
+                encoded_text = base64.b64encode(word.encode('utf-8')).decode('utf-8')
+                python_executable = sys.executable
+                script = (
+                    "import pyttsx3, base64; "
+                    "engine = pyttsx3.init(); "
+                    "engine.setProperty('rate', 130); "
+                    f"text_to_speak = base64.b64decode('{encoded_text}').decode('utf-8'); "
+                    "engine.say(text_to_speak); "
+                    "engine.runAndWait()"
+                )
+                command = [python_executable, "-c", script]
+                
+                # Use Popen to run the second speak in the background without waiting.
+                # This allows the user to start typing immediately.
+                subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except Exception as e:
+                # Fallback in case the background process fails to launch.
+                print(f"[DEBUG] Could not launch background speech: {e}")
+
+            # The input prompt is now available immediately after the first speak.
             typed_word = input("\nType the word here: ").strip()
             test_results.append({'correct': item, 'typed': typed_word})
 
