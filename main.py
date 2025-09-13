@@ -338,6 +338,24 @@ class SpellingApp(App):
         sm.add_widget(ResultsScreen(name='results'))
         return sm
 
+    def on_start(self):
+        """This is called when the app starts. We will request permissions here."""
+        self.request_storage_permission()
+
+    def request_storage_permission(self):
+        """Requests the necessary storage permission on Android."""
+        if platform == 'android':
+            from plyer import permissions
+            
+            def callback(permission_list, grant_results):
+                if all(grant_results):
+                    print("Storage permission granted.")
+                else:
+                    print("Storage permission denied.")
+
+            permission_list = ['android.permission.READ_EXTERNAL_STORAGE']
+            permissions.request(permission_list, callback)
+
 if __name__ == '__main__':
     Builder.load_file('spellingapp.kv')
     SpellingApp().run()
