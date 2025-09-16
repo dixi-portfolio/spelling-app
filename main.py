@@ -335,11 +335,20 @@ class SpellingTestScreen(Screen):
         Clock.schedule_once(lambda dt: self.next_word(), 0.2)
 
     def speak_and_focus(self, text):
-        """Speak text and then focus the input; all on the main thread."""
-        # Schedule TTS immediately on the UI thread (speak() itself schedules Android TTS)
-        Clock.schedule_once(lambda dt: speak(text), 0)
-        # Give TTS a moment to start, then focus the input
-        Clock.schedule_once(self.set_focus, 0.5)
+        """
+        First, focus the input box immediately.
+        Then, start TTS in a background thread so the UI never freezes.
+        """
+        # Always set focus first
+        Clock.schedule_once(self.set_focus, 0)
+
+        # Start TTS slightly later (non-blocking)
+        def _do_tts(dt):
+            print(f"[DEBUG] Speaking: {text}")  # for logcat/desktop debug
+            speak(text)
+
+        Clock.schedule_once(_do_tts, 0.1)
+
         
     def set_focus(self, dt):
         """Callback to set focus on the text input."""
