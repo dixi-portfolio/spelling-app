@@ -17,6 +17,34 @@ import base64
 from kivy.uix.popup import Popup
 from kivy.uix.button import Button
 
+# --- Misspelled words helpers ---
+MISSPELLED_PATH = 'misspelled_words.json'
+
+def save_misspelled_list(words):
+    """Saves the list of misspelled words to a JSON file."""
+    try:
+        with open(MISSPELLED_PATH, 'w') as f:
+            json.dump(words, f)
+    except IOError:
+        print(f"Error: Could not save misspelled words to {MISSPELLED_PATH}")
+
+def load_misspelled_list():
+    """Loads the misspelled words list if it exists."""
+    if not os.path.exists(MISSPELLED_PATH):
+        return []
+    try:
+        with open(MISSPELLED_PATH, 'r') as f:
+            data = json.load(f)
+            return data if data else [] # Return data only if file is not empty
+    except (IOError, json.JSONDecodeError):
+        return []
+
+def clear_misspelled_list():
+    """Removes the misspelled words file if it exists."""
+    if os.path.exists(MISSPELLED_PATH):
+        os.remove(MISSPELLED_PATH)
+
+
 # --- Recent Files Helpers ---
 RECENT_FILES_PATH = 'recent_files.json'
 
@@ -73,6 +101,7 @@ def speak(text):
             script = (
                 "import pyttsx3, base64; "
                 "engine = pyttsx3.init(); "
+                "engine.setProperty('rate', 150); "
                 f"text_to_speak = base64.b64decode('{encoded_text}').decode('utf-8'); "
                 "engine.say(text_to_speak); "
                 "engine.runAndWait()"
@@ -139,6 +168,22 @@ def load_words_from_path(filepath):
 # --- Kivy Screen Classes ---
 
 class MainMenuScreen(Screen):
+
+    # Add this property to automatically track if the list is available
+    misspelled_words_available = ListProperty([])
+
+    def on_enter(self, *args):
+        """Check for a saved misspelled list when the screen appears."""
+        self.misspelled_words_available = load_misspelled_list()
+
+    def start_with_misspelled_list(self):
+        """Loads the misspelled list and jumps straight to the test."""
+        app = App.get_running_app()
+        # The list is already stored in our property from on_enter
+        if self.misspelled_words_available:
+            app.words_to_test = self.misspelled_words_available
+            self.manager.current = 'spelling_test'
+
     def load_file(self):
         """Checks for recent files and provides options to the user."""
         recent_files = load_recent_files()
@@ -317,6 +362,9 @@ class ResultsScreen(Screen):
             self.ids.practice_button.disabled = False
             
             app.words_to_test = [item['correct'] for item in misspelled_words]
+
+            # --- ADD THIS LINE TO SAVE THE LIST ---
+            save_misspelled_list(app.words_to_test)
 
     def practice_again(self):
         """Starts a new test with only the misspelled words."""

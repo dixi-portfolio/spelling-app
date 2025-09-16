@@ -13,9 +13,16 @@
             height: self.texture_size[1] + 20
 
         Button:
-            text: 'Load Word List (.csv or .txt)'
+            text: 'Load Word List (.csv)'
             font_size: '20sp'
             on_press: root.load_file()
+
+        Button:
+            text: 'Practice Last Misspelled Words'
+            font_size: '20sp'
+            # This makes the button appear/disappear automatically
+            disabled: not root.misspelled_words_available
+            on_press: root.start_with_misspelled_list()
         
         Button:
             text: 'Exit'
