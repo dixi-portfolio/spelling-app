@@ -392,17 +392,22 @@ class SpellingApp(App):
 
     def request_storage_permission(self):
         """Requests the necessary storage permission on Android."""
-        if platform == 'android':
-            from plyer import permissions
-            
-            def callback(permission_list, grant_results):
-                if all(grant_results):
-                    print("Storage permission granted.")
-                else:
-                    print("Storage permission denied.")
+        if platform == "android":
+            try:
+                from android.permissions import request_permissions, Permission
 
-            permission_list = ['android.permission.READ_EXTERNAL_STORAGE']
-            permissions.request(permission_list, callback)
+                def callback(permissions, grants):
+                    if all(grants):
+                        print("Storage permission granted.")
+                    else:
+                        print("Storage permission denied.")
+
+                request_permissions([Permission.READ_EXTERNAL_STORAGE], callback)
+            except Exception as e:
+                print(f"Permission request failed: {e}")
+        else:
+            print("Not on Android, skipping permission request.")
+
 
 if __name__ == '__main__':
     Builder.load_file('spellingapp.kv')
