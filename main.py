@@ -17,8 +17,17 @@ import base64
 from kivy.uix.popup import Popup
 from kivy.uix.button import Button
 
-# --- Misspelled words helpers ---
-MISSPELLED_PATH = 'misspelled_words.json'
+
+# --- App-safe paths for JSON files ---
+def _safe_path(filename):
+    try:
+        return os.path.join(App.get_running_app().user_data_dir, filename)
+    except Exception:
+        return filename  # fallback on desktop
+
+MISSPELLED_PATH   = _safe_path('misspelled_words.json')
+
+
 
 def save_misspelled_list(words):
     """Saves the list of misspelled words to a JSON file."""
@@ -46,7 +55,7 @@ def clear_misspelled_list():
 
 
 # --- Recent Files Helpers ---
-RECENT_FILES_PATH = 'recent_files.json'
+RECENT_FILES_PATH = _safe_path('recent_files.json')
 
 def load_recent_files():
     """Loads the list of recent file paths from a JSON file."""
@@ -88,32 +97,58 @@ def remove_recent_file(filepath):
 # This section defines a hybrid TTS function. It uses a robust subprocess
 # method for desktop (to avoid state bugs) and plyer.tts for mobile.
 
+from kivy.clock import Clock
+from kivy.utils import platform
+
 def speak(text):
     """
-    A platform-aware speak function that uses the correct TTS engine.
-    For desktop, it launches a separate process to ensure a clean state for each utterance.
+    Platform-aware TTS.
+    - Desktop: run pyttsx3 in a subprocess on a background thread.
+    - Android: run plyer.tts in a background thread.
+    Both are non-blocking so Kivy's UI stays responsive.
     """
     try:
         if platform in ('win', 'linux', 'macosx'):
-            # This robust method avoids threading issues with the pyttsx3 COM interface on Windows.
-            encoded_text = base64.b64encode(text.encode('utf-8')).decode('utf-8')
-            python_executable = sys.executable
-            script = (
-                "import pyttsx3, base64; "
-                "engine = pyttsx3.init(); "
-                "engine.setProperty('rate', 150); "
-                f"text_to_speak = base64.b64decode('{encoded_text}').decode('utf-8'); "
-                "engine.say(text_to_speak); "
-                "engine.runAndWait()"
-            )
-            command = [python_executable, "-c", script]
-            subprocess.run(command, check=True, capture_output=True)
-        else:
-            # On mobile, we can use the more direct plyer implementation
+            import base64, subprocess, sys, threading
+
+            def _do_tts():
+                encoded_text = base64.b64encode(text.encode('utf-8')).decode('utf-8')
+                python_executable = sys.executable
+                script = (
+                    "import pyttsx3, base64; "
+                    "engine = pyttsx3.init(); "
+                    "engine.setProperty('rate', 150); "
+                    f"text_to_speak = base64.b64decode('{encoded_text}').decode('utf-8'); "
+                    "engine.say(text_to_speak); "
+                    "engine.runAndWait()"
+                )
+                try:
+                    subprocess.run([python_executable, "-c", script], check=True, capture_output=True)
+                except Exception as e:
+                    print("[TTS Desktop Error]", e)
+
+            threading.Thread(target=_do_tts, daemon=True).start()
+
+        elif platform == 'android':
             from plyer import tts
-            tts.speak(message=text)
+            import threading
+
+            def _do_tts():
+                try:
+                    tts.speak(message=text)
+                except Exception as e:
+                    print("[TTS Android Error]", e)
+
+            threading.Thread(target=_do_tts, daemon=True).start()
+
+        else:
+            print(f"[speak] Unsupported platform {platform}, skipping TTS.")
+
     except Exception as e:
-        print(f"TTS Error in speak() function: {repr(e)}")
+        print(f"TTS Error in speak(): {repr(e)}")
+
+
+
 
 
 # --- Helper Functions (ported from the original script) ---
@@ -300,12 +335,10 @@ class SpellingTestScreen(Screen):
         Clock.schedule_once(lambda dt: self.next_word(), 0.2)
 
     def speak_and_focus(self, text):
-        """Speaks text in a thread and focuses the input."""
-        def speak_in_thread():
-            # This now calls our new, platform-aware speak function
-            speak(text)
-        
-        threading.Thread(target=speak_in_thread).start()
+        """Speak text and then focus the input; all on the main thread."""
+        # Schedule TTS immediately on the UI thread (speak() itself schedules Android TTS)
+        Clock.schedule_once(lambda dt: speak(text), 0)
+        # Give TTS a moment to start, then focus the input
         Clock.schedule_once(self.set_focus, 0.5)
         
     def set_focus(self, dt):
